@@ -27,16 +27,10 @@ public:
 public:
 
 	UFUNCTION(BlueprintCallable)
-	void ModifyTexture();
+	void Grayscale(UTexture2D* InTexture);
 
 
 	UFUNCTION(BlueprintCallable)
-	void CreateWhiteTexture();
-
-
-public:
-
-	UPROPERTY(EditAnywhere)
-	UTexture2D* OrigTexture;
+	void CreateNewTexture();
 
 };

@@ -26,13 +26,13 @@ void AATexture2DTest::Tick(float DeltaTime)
 
 }
 
-void AATexture2DTest::ModifyTexture()
+void AATexture2DTest::Grayscale(UTexture2D* InTexture)
 {
-	if (OrigTexture)
+	if (InTexture)
 	{
-		int32 row = OrigTexture->GetSizeY();
-		int32 col = OrigTexture->GetSizeX();
-		FColor* OrigTextureColor = static_cast<FColor*>(OrigTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+		int32 row = InTexture->GetSizeY();
+		int32 col = InTexture->GetSizeX();
+		FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
 		
 		uint8* Pixels = new uint8[col * row * 4];
 		for (int r = 0; r <= row; r++)
@@ -40,9 +40,9 @@ void AATexture2DTest::ModifyTexture()
 			for (int c = 0; c <= col; c++)
 			{
 
-				FColor& CurColor = OrigTextureColor[(c + (r * col))];
+				FColor& CurColor = InTextureColor[(c + (r * col))];
 
-				uint8 avg = (CurColor.R + CurColor.G + CurColor.B) / 765;
+				uint8 avg = (CurColor.R + CurColor.G + CurColor.B) / 3;
 				//	change color
 
 				int32 curPixelIndex = ((r * col) + c);
@@ -54,18 +54,18 @@ void AATexture2DTest::ModifyTexture()
 			}
 		}
 
-		OrigTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+		InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 
-		OrigTexture->UpdateResource();
+		InTexture->UpdateResource();
 
-		OrigTexture->Source.Init(col, row, 1, 1, ETextureSourceFormat::TSF_BGRA8, Pixels);
+		InTexture->Source.Init(col, row, 1, 1, InTexture->Source.GetFormat(), Pixels);
 
-		UPackage* Package = OrigTexture->GetPackage();
+		UPackage* Package = InTexture->GetPackage();
 		Package->FullyLoad();
 
 		FString PackageFileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
 
-		if (UPackage::SavePackage(Package, OrigTexture, EObjectFlags::RF_Public | EObjectFlags::RF_Standalone, *PackageFileName))
+		if (UPackage::SavePackage(Package, InTexture, EObjectFlags::RF_Public | EObjectFlags::RF_Standalone, *PackageFileName))
 		{
 			UE_LOG(LogTemp, Log, TEXT("Texture saved successfully."));
 		}
@@ -76,7 +76,7 @@ void AATexture2DTest::ModifyTexture()
 	}
 }
 
-void AATexture2DTest::CreateWhiteTexture()
+void AATexture2DTest::CreateNewTexture()
 {
 	FString PackageName = TEXT("/Game/ProceduralTextures/");
 	FString TextureName = TEXT("ProcTex");

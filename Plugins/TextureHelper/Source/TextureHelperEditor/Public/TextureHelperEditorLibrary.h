@@ -1,0 +1,58 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "EditorUtilityLibrary.h"
+#include "TextureHelperEditorLibrary.generated.h"
+
+UENUM(BlueprintType)
+enum class EBlendModes : uint8
+{
+	BLEND_Opaque UMETA(DisplayName = "Opaque"),
+	BLEND_Masked UMETA(DisplayName = "Masked"),
+	BLEND_Translucent UMETA(DisplayName = "Translucent"),
+	BLEND_Additive UMETA(DisplayName = "Additive"),
+	BLEND_Modulate UMETA(DisplayName = "Modulate"),
+	BLEND_AlphaComposite UMETA(DisplayName = "Alpha Composite"),
+	BLEND_AlphaHoldout UMETA(DisplayName = "Alpha Holdout"),
+	BLEND_MAX UMETA(Hidden)
+};
+
+/**
+ * 
+ */
+UCLASS()
+class TEXTUREHELPEREDITOR_API UTextureHelperEditorLibrary : public UEditorUtilityLibrary
+{
+	GENERATED_BODY()
+	
+public:
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void Grayscale(UTexture2D* InTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void Negative(UTexture2D* InTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void SaveTexture(UTexture2D* TextureAsset, UTexture2D* WorkingTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void SaveAsTexture(UTexture2D* WorkingTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void Undo();
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static UTexture2D* DisplayTexture(UTexture2D* TextureAsset);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void CopyTexture(UTexture2D* SourceTexture, UTexture2D* DestinationTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static UTexture2D* DuplicateTexture(UTexture2D* SourceTexture);
+
+private:
+	static UTexture2D* CurrTexture;
+};

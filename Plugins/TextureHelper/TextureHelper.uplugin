@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1",
+	"FriendlyName": "TextureHelper",
+	"Description": "An editor ",
+	"Category": "Other",
+	"CreatedBy": "Aryamaan Singh",
+	"CreatedByURL": "https://www.linkedin.com/in/aryamaan-singh-2129031b8/",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "TextureHelperEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}
