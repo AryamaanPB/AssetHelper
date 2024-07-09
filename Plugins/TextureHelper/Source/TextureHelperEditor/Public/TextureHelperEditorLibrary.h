@@ -36,6 +36,9 @@ public:
 	static void Negative(UTexture2D* InTexture);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static UTexture2D* CreateCheckeredTexture();
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void SaveTexture(UTexture2D* TextureAsset, UTexture2D* WorkingTexture);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")

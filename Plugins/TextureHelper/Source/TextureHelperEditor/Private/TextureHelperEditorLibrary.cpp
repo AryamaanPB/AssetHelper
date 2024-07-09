@@ -72,6 +72,57 @@ void UTextureHelperEditorLibrary::Negative(UTexture2D* InTexture)
 	InTexture->UpdateResource();
 }
 
+UTexture2D* UTextureHelperEditorLibrary::CreateCheckeredTexture()
+{
+	const int32 TextureWidth = 1920; // Texture dimensions
+	const int32 TextureHeight = 1080; // Texture dimensions
+	const int32 CheckeredSize = 8; // Size of each checkered block
+
+	// Create a transient UTexture2D
+	UTexture2D* NewTexture = UTexture2D::CreateTransient(TextureWidth, TextureHeight, PF_B8G8R8A8);
+	if (!NewTexture || !NewTexture->PlatformData)
+	{
+		return nullptr;
+	}
+
+	// Ensure the texture has at least one mipmap
+	FTexture2DMipMap& Mip = NewTexture->PlatformData->Mips[0];
+	Mip.SizeX = TextureWidth;
+	Mip.SizeY = TextureHeight;
+	Mip.BulkData.Lock(LOCK_READ_WRITE);
+
+	// Allocate memory for the texture data
+	const int32 TotalBytes = TextureWidth * TextureHeight * 4;
+	uint8* MipData = (uint8*)Mip.BulkData.Realloc(TotalBytes);
+	FMemory::Memzero(MipData, TotalBytes);
+
+	// Fill the texture with a checkered pattern
+	for (int32 Y = 0; Y < TextureHeight; ++Y)
+	{
+		for (int32 X = 0; X < TextureWidth; ++X)
+		{
+			// Determine the color based on the checkered pattern
+			bool bIsGray = ((X / CheckeredSize) % 2 == (Y / CheckeredSize) % 2);
+			FColor PixelColor = bIsGray ? FColor(128, 128, 128, 255) : FColor(0, 0, 0, 255);
+
+			// Set the pixel data
+			int32 Index = ((Y * TextureWidth) + X) * 4;
+			MipData[Index + 0] = PixelColor.B; // Blue
+			MipData[Index + 1] = PixelColor.G; // Green
+			MipData[Index + 2] = PixelColor.R; // Red
+			MipData[Index + 3] = PixelColor.A; // Alpha
+		}
+	}
+
+	// Unlock the texture data
+	Mip.BulkData.Unlock();
+
+	// Update the texture resource
+	NewTexture->UpdateResource();
+
+	return NewTexture;
+}
+
 void UTextureHelperEditorLibrary::SaveTexture(UTexture2D* TextureAsset, UTexture2D* WorkingTexture)
 {
 	if (!TextureAsset)
