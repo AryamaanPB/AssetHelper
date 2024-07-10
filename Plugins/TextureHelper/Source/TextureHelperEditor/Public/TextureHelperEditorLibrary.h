@@ -19,6 +19,13 @@ enum class EBlendModes : uint8
 	BLEND_MAX UMETA(Hidden)
 };
 
+UENUM(BlueprintType)
+enum class ERotationMode : uint8
+{
+	ROTATE_CLOCKWISE UMETA(DisplayName = "Clockwise"),
+	ROTATE_ANTICLOCKWISE UMETA(DisplayName = "Anti-clockwise"),
+};
+
 /**
  * 
  */
@@ -34,6 +41,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void Negative(UTexture2D* InTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void RotateTextureInPlace(UTexture2D* InTexture, ERotationMode RotationMode);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static UTexture2D* CreateCheckeredTexture();

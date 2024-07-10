@@ -72,6 +72,64 @@ void UTextureHelperEditorLibrary::Negative(UTexture2D* InTexture)
 	InTexture->UpdateResource();
 }
 
+void UTextureHelperEditorLibrary::RotateTextureInPlace(UTexture2D* InTexture, ERotationMode RotationMode)
+{
+	if (!InTexture || !InTexture->PlatformData || InTexture->PlatformData->Mips.Num() == 0)
+	{
+		return;
+	}
+
+	// Get the original texture dimensions
+	const int32 OriginalWidth = InTexture->PlatformData->Mips[0].SizeX;
+	const int32 OriginalHeight = InTexture->PlatformData->Mips[0].SizeY;
+
+	// Lock the texture's mipmap data for reading
+	uint8* OriginalMipData = static_cast<uint8*>(InTexture->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+
+	// Create a temporary buffer for the rotated data
+	TArray<uint8> RotatedData;
+	RotatedData.SetNumUninitialized(OriginalWidth * OriginalHeight * 4);
+
+	// Fill the temporary buffer with the rotated data
+	for (int32 Y = 0; Y < OriginalHeight; ++Y)
+	{
+		for (int32 X = 0; X < OriginalWidth; ++X)
+		{
+			int32 OriginalIndex = ((Y * OriginalWidth) + X) * 4;
+			int32 RotatedIndex;
+			if (RotationMode == ERotationMode::ROTATE_CLOCKWISE)
+			{
+				RotatedIndex = ((X * OriginalHeight) + (OriginalHeight - 1 - Y)) * 4;
+			}
+			else if (RotationMode == ERotationMode::ROTATE_ANTICLOCKWISE)
+			{
+				RotatedIndex = (((OriginalWidth - 1 - X) * OriginalHeight) + Y) * 4;
+			}
+
+			RotatedData[RotatedIndex + 0] = OriginalMipData[OriginalIndex + 0]; // Blue
+			RotatedData[RotatedIndex + 1] = OriginalMipData[OriginalIndex + 1]; // Green
+			RotatedData[RotatedIndex + 2] = OriginalMipData[OriginalIndex + 2]; // Red
+			RotatedData[RotatedIndex + 3] = OriginalMipData[OriginalIndex + 3]; // Alpha
+		}
+	}
+
+	// Reallocate the original texture to the new dimensions
+	InTexture->PlatformData->SizeX = OriginalHeight;
+	InTexture->PlatformData->SizeY = OriginalWidth;
+	InTexture->PlatformData->Mips[0].SizeX = OriginalHeight;
+	InTexture->PlatformData->Mips[0].SizeY = OriginalWidth;
+
+	// Copy the rotated data back into the original texture
+	FMemory::Memcpy(OriginalMipData, RotatedData.GetData(), RotatedData.Num());
+
+	// Unlock the texture data
+	InTexture->PlatformData->Mips[0].BulkData.Unlock();
+
+	// Update the texture resource
+	InTexture->UpdateResource();
+
+}
+
 UTexture2D* UTextureHelperEditorLibrary::CreateCheckeredTexture()
 {
 	const int32 TextureWidth = 1920; // Texture dimensions
