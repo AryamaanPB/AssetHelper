@@ -130,6 +130,55 @@ void UTextureHelperEditorLibrary::RotateTextureInPlace(UTexture2D* InTexture, ER
 
 }
 
+void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance, TArray<FColor>& OriginalData)
+{
+	if (!InTexture || !InTexture->GetPlatformData())
+	{
+		return;
+	}
+
+	int32 TextureHeight = InTexture->GetSizeY();
+	int32 TextureWidth = InTexture->GetSizeX();
+	FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+
+	// Backup the original texture data if not already backed up
+	if (OriginalData.Num() == 0)
+	{
+		OriginalData.SetNum(TextureWidth * TextureHeight);
+		FMemory::Memcpy(OriginalData.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
+	}
+
+	// Normalize the ChromaColor values to be in the range [0, 1]
+	FVector ChromaVector(ChromaColor.R / 255.0f, ChromaColor.G / 255.0f, ChromaColor.B / 255.0f);
+
+	for (int32 Y = 0; Y < TextureHeight; ++Y)
+	{
+		for (int32 X = 0; X < TextureWidth; ++X)
+		{
+			int32 Index = X + (Y * TextureWidth);
+			FColor& CurColor = InTextureColor[Index];
+			FColor& OriginalColor = OriginalData[Index];
+
+			// Restore the original color
+			CurColor = OriginalColor;
+
+			// Normalize the current color values to be in the range [0, 1]
+			FVector CurVector(CurColor.R / 255.0f, CurColor.G / 255.0f, CurColor.B / 255.0f);
+
+			// Calculate the distance in RGB color space
+			float ColorDiff = FVector::Dist(CurVector, ChromaVector);
+
+			if (ColorDiff <= InTolerance)
+			{
+				CurColor.A = 0;
+			}
+		}
+	}
+
+	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+	InTexture->UpdateResource();
+}
+
 UTexture2D* UTextureHelperEditorLibrary::CreateCheckeredTexture()
 {
 	const int32 TextureWidth = 1920; // Texture dimensions

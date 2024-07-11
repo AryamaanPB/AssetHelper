@@ -46,6 +46,9 @@ public:
 	static void RotateTextureInPlace(UTexture2D* InTexture, ERotationMode RotationMode);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance, TArray<FColor>& OriginalData);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static UTexture2D* CreateCheckeredTexture();
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
