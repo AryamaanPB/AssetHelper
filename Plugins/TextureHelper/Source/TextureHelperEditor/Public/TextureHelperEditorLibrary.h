@@ -46,7 +46,7 @@ public:
 	static void RotateTextureInPlace(UTexture2D* InTexture, ERotationMode RotationMode);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
-	static void ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance, TArray<FColor>& OriginalData);
+	static void ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static UTexture2D* CreateCheckeredTexture();
@@ -56,6 +56,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void SaveAsTexture(UTexture2D* WorkingTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void Clear();
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void Undo();
@@ -70,5 +73,6 @@ public:
 	static UTexture2D* DuplicateTexture(UTexture2D* SourceTexture);
 
 private:
-	static UTexture2D* CurrTexture;
+
+	static TArray<FColor> BufferColorData;
 };

@@ -9,7 +9,7 @@
 
 #define LOCTEXT_NAMESPACE "TextureHelpers"
 
-UTexture2D* UTextureHelperEditorLibrary::CurrTexture = nullptr;
+TArray<FColor> UTextureHelperEditorLibrary::BufferColorData;
 
 void UTextureHelperEditorLibrary::Grayscale(UTexture2D* InTexture)
 {
@@ -130,7 +130,7 @@ void UTextureHelperEditorLibrary::RotateTextureInPlace(UTexture2D* InTexture, ER
 
 }
 
-void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance, TArray<FColor>& OriginalData)
+void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance)
 {
 	if (!InTexture || !InTexture->GetPlatformData())
 	{
@@ -142,10 +142,10 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 	FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
 
 	// Backup the original texture data if not already backed up
-	if (OriginalData.Num() == 0)
+	if (BufferColorData.Num() == 0)
 	{
-		OriginalData.SetNum(TextureWidth * TextureHeight);
-		FMemory::Memcpy(OriginalData.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
+		BufferColorData.SetNum(TextureWidth * TextureHeight);
+		FMemory::Memcpy(BufferColorData.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
 	}
 
 	// Normalize the ChromaColor values to be in the range [0, 1]
@@ -157,7 +157,7 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 		{
 			int32 Index = X + (Y * TextureWidth);
 			FColor& CurColor = InTextureColor[Index];
-			FColor& OriginalColor = OriginalData[Index];
+			FColor& OriginalColor = BufferColorData[Index];
 
 			// Restore the original color
 			CurColor = OriginalColor;
@@ -252,6 +252,8 @@ void UTextureHelperEditorLibrary::SaveTexture(UTexture2D* TextureAsset, UTexture
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to save the texture."));
 	}
+
+	BufferColorData.Empty();
 }
 
 static bool OpenSaveAsDialog(UClass* SavedClass, const FString& InDefaultPath, const FString& InNewNameSuggestion, FString& OutPackageName)
@@ -338,6 +340,11 @@ void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 		}
 	}
 	*/
+}
+
+void UTextureHelperEditorLibrary::Clear()
+{
+	BufferColorData.Empty();
 }
 
 void UTextureHelperEditorLibrary::Undo()
