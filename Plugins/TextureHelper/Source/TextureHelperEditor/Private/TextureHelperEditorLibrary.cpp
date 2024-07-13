@@ -137,16 +137,11 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 		return;
 	}
 
+	BackupTexture(InTexture);
+
 	int32 TextureHeight = InTexture->GetSizeY();
 	int32 TextureWidth = InTexture->GetSizeX();
 	FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
-
-	// Backup the original texture data if not already backed up
-	if (BufferColorData.Num() == 0)
-	{
-		BufferColorData.SetNum(TextureWidth * TextureHeight);
-		FMemory::Memcpy(BufferColorData.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
-	}
 
 	// Normalize the ChromaColor values to be in the range [0, 1]
 	FVector ChromaVector(ChromaColor.R / 255.0f, ChromaColor.G / 255.0f, ChromaColor.B / 255.0f);
@@ -159,8 +154,7 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 			FColor& CurColor = InTextureColor[Index];
 			FColor& OriginalColor = BufferColorData[Index];
 
-			// Restore the original color
-			CurColor = OriginalColor;
+			CurColor.A = OriginalColor.A;
 
 			// Normalize the current color values to be in the range [0, 1]
 			FVector CurVector(CurColor.R / 255.0f, CurColor.G / 255.0f, CurColor.B / 255.0f);
@@ -177,6 +171,27 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 
 	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 	InTexture->UpdateResource();
+}
+
+void UTextureHelperEditorLibrary::BackupTexture(UTexture2D* InTexture)
+{
+	if (!InTexture)
+	{
+		return;
+	}
+
+	int32 TextureHeight = InTexture->GetSizeY();
+	int32 TextureWidth = InTexture->GetSizeX();
+	FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+
+	// Backup the original texture data if not already backed up
+	if (BufferColorData.Num() == 0)
+	{
+		BufferColorData.SetNum(TextureWidth * TextureHeight);
+		FMemory::Memcpy(BufferColorData.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
+	}
+
+	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 }
 
 UTexture2D* UTextureHelperEditorLibrary::CreateCheckeredTexture()
@@ -357,6 +372,8 @@ UTexture2D* UTextureHelperEditorLibrary::DisplayTexture(UTexture2D* TextureAsset
 	{
 		return nullptr;
 	}
+
+	BackupTexture(TextureAsset);
 
 	return DuplicateTexture(TextureAsset);
 }

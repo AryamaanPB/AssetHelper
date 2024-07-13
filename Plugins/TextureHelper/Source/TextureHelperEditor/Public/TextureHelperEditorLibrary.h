@@ -49,6 +49,9 @@ public:
 	static void ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void BackupTexture(UTexture2D* InTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static UTexture2D* CreateCheckeredTexture();
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
