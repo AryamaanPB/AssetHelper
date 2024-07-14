@@ -139,6 +139,8 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 
 	BackupTexture(InTexture);
 
+	float ScaledTolerance = InTolerance * FMath::Sqrt(3.0);
+
 	int32 TextureHeight = InTexture->GetSizeY();
 	int32 TextureWidth = InTexture->GetSizeX();
 	FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
@@ -156,13 +158,18 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 
 			CurColor.A = OriginalColor.A;
 
+			if (InTolerance <= 0.001)
+			{
+				continue;
+			}
+
 			// Normalize the current color values to be in the range [0, 1]
 			FVector CurVector(CurColor.R / 255.0f, CurColor.G / 255.0f, CurColor.B / 255.0f);
 
 			// Calculate the distance in RGB color space
 			float ColorDiff = FVector::Dist(CurVector, ChromaVector);
 
-			if (ColorDiff <= InTolerance)
+			if (ColorDiff <= ScaledTolerance)
 			{
 				CurColor.A = 0;
 			}
@@ -172,6 +179,7 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 	InTexture->UpdateResource();
 }
+
 
 void UTextureHelperEditorLibrary::BackupTexture(UTexture2D* InTexture)
 {
