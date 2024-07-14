@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "EditorUtilityLibrary.h"
+#include "EngineWindowController.h"
 #include "TextureHelperEditorLibrary.generated.h"
 
 UENUM(BlueprintType)
@@ -75,7 +76,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static UTexture2D* DuplicateTexture(UTexture2D* SourceTexture);
 
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static UEngineWindowController* PickColor();
+
 private:
 
 	static TArray<FColor> BufferColorData;
+
+	static UEngineWindowController* EngineWindowManager;
 };

@@ -31,6 +31,7 @@ public class TextureHelperEditor : ModuleRules
 				"AssetRegistry",
 				"UnrealEd",
 				"ContentBrowser",
+                "AppFramework",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

@@ -11,6 +11,10 @@
 
 TArray<FColor> UTextureHelperEditorLibrary::BufferColorData;
 
+UEngineWindowController* UTextureHelperEditorLibrary::EngineWindowManager = nullptr;
+
+//FOnColorPicked UTextureHelperEditorLibrary::OnColorPickedEvent;
+
 void UTextureHelperEditorLibrary::Grayscale(UTexture2D* InTexture)
 {
 	if (!InTexture)
@@ -490,4 +494,16 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 	NewTexture->UpdateResource();
 
 	return NewTexture;
+}
+
+UEngineWindowController* UTextureHelperEditorLibrary::PickColor()
+{
+	if (!EngineWindowManager)
+	{
+		EngineWindowManager = NewObject<UEngineWindowController>();
+	}
+
+	EngineWindowManager->OpenColorPickerWindow();
+
+	return EngineWindowManager;
 }
