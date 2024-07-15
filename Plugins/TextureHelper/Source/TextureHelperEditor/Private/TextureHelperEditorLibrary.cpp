@@ -412,28 +412,41 @@ void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTextur
 	// Clear existing mipmaps in the destination texture
 	DestinationTexture->PlatformData->Mips.Empty();
 
+	int col = SourceTexture->GetPlatformData()->SizeX;
+	int row = SourceTexture->GetPlatformData()->SizeY;
+
 	// Copy each mip level
-	for (int32 MipIndex = 0; MipIndex < SourceTexture->PlatformData->Mips.Num(); ++MipIndex)
+	for (int32 MipIndex = 0; MipIndex < SourceTexture->GetPlatformData()->Mips.Num(); ++MipIndex)
 	{
-		const FTexture2DMipMap& SourceMip = SourceTexture->PlatformData->Mips[MipIndex];
-		FTexture2DMipMap* DestMip = new FTexture2DMipMap();
+		//const FTexture2DMipMap& SourceMip = SourceTexture->GetPlatformData()->Mips[MipIndex];
+		//FTexture2DMipMap& DestMip = DestinationTexture->GetPlatformData()->Mips[MipIndex];
+		//DestMip.SizeX = SourceMip.SizeX;
+		//DestMip.SizeY = SourceMip.SizeY;
+		//DestMip.BulkData.Lock(LOCK_READ_WRITE);
+		//void* DestData = DestMip.BulkData.Realloc(SourceMip.BulkData.GetBulkDataSize());
 
-		DestMip->SizeX = SourceMip.SizeX;
-		DestMip->SizeY = SourceMip.SizeY;
+		FColor* InTextureColor = static_cast<FColor*>(SourceTexture->GetPlatformData()->Mips[MipIndex].BulkData.Lock(LOCK_READ_WRITE));
 
-		// Allocate memory for the mip data
-		DestMip->BulkData.Lock(LOCK_READ_WRITE);
-		void* DestData = DestMip->BulkData.Realloc(SourceMip.BulkData.GetBulkDataSize());
-		const void* SourceData = SourceMip.BulkData.LockReadOnly();
+		uint8* Pixels = new uint8[col * row * 4];
+		for (int r = 0; r <= row; r++)
+		{
+			for (int c = 0; c <= col; c++)
+			{
 
-		// Copy the data
-		FMemory::Memcpy(DestData, SourceData, SourceMip.BulkData.GetBulkDataSize());
+				FColor& CurColor = InTextureColor[(c + (r * col))];
 
-		SourceMip.BulkData.Unlock();
-		DestMip->BulkData.Unlock();
+				int32 curPixelIndex = ((r * col) + c);
+				Pixels[4 * curPixelIndex] = CurColor.R;
+				Pixels[4 * curPixelIndex + 1] = CurColor.G;
+				Pixels[4 * curPixelIndex + 2] = CurColor.B;
+				Pixels[4 * curPixelIndex + 3] = CurColor.A;
 
-		// Add the new mip level to the destination texture
-		DestinationTexture->PlatformData->Mips.Add(DestMip);
+			}
+		}
+
+		SourceTexture->GetPlatformData()->Mips[MipIndex].BulkData.Unlock();
+
+		DestinationTexture->Source.Init(col, row, SourceTexture->GetPlatformData()->GetNumSlices(), SourceTexture->GetNumMips(), SourceTexture->Source.GetFormat(), Pixels);
 	}
 
 	// Update the destination texture resource
