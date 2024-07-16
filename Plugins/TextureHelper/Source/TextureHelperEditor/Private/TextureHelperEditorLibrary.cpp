@@ -204,6 +204,36 @@ void UTextureHelperEditorLibrary::BackupTexture(UTexture2D* InTexture)
 	}
 
 	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+
+	/*
+	int32 NumMips = InTexture->GetPlatformData()->Mips.Num();
+
+	int32 TotalSize = 0;
+	for (int32 MipIndex = 0; MipIndex < NumMips; ++MipIndex)
+	{
+		FTexture2DMipMap& SourceMip = InTexture->GetPlatformData()->Mips[MipIndex];
+		TotalSize += SourceMip.SizeX * SourceMip.SizeY * 4;
+	}
+
+	uint8* CombinedPixels = new uint8[TotalSize];
+	uint8* CurrentPtr = CombinedPixels;
+
+	for (int32 MipIndex = 0; MipIndex < NumMips; ++MipIndex)
+	{
+		FTexture2DMipMap& SourceMip = InTexture->GetPlatformData()->Mips[MipIndex];
+		int32 Width = SourceMip.SizeX;
+		int32 Height = SourceMip.SizeY;
+		FColor* SourceColorData = static_cast<FColor*>(SourceMip.BulkData.Lock(LOCK_READ_WRITE));
+
+		BufferColorData.SetNum(TextureWidth * TextureHeight);
+		FMemory::Memcpy(BufferColorData.GetData(), SourceColorData, TextureWidth * TextureHeight * sizeof(FColor));
+
+		SourceMip.BulkData.Unlock();
+		CurrentPtr += Width * Height * 4;
+	}
+
+	delete[] CombinedPixels;
+	*/
 }
 
 UTexture2D* UTextureHelperEditorLibrary::CreateCheckeredTexture()
@@ -390,68 +420,96 @@ UTexture2D* UTextureHelperEditorLibrary::DisplayTexture(UTexture2D* TextureAsset
 	return DuplicateTexture(TextureAsset);
 }
 
+//void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTexture2D* DestinationTexture)
+//{
+//	if (DestinationTexture && SourceTexture)
+//	{
+//		int32 row = DestinationTexture->GetSizeY();
+//		int32 col = DestinationTexture->GetSizeX();
+//		FColor* InTextureColor = static_cast<FColor*>(SourceTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+//
+//		uint8* Pixels = new uint8[col * row * 4];
+//		for (int r = 0; r <= row; r++)
+//		{
+//			for (int c = 0; c <= col; c++)
+//			{
+//
+//				FColor& CurColor = InTextureColor[(c + (r * col))];
+//
+//				uint8 avg = (CurColor.R + CurColor.G + CurColor.B) / 3;
+//				//	change color
+//
+//				int32 curPixelIndex = ((r * col) + c);
+//				Pixels[4 * curPixelIndex] = CurColor.R;
+//				Pixels[4 * curPixelIndex + 1] = CurColor.G;
+//				Pixels[4 * curPixelIndex + 2] = CurColor.B;
+//				Pixels[4 * curPixelIndex + 3] = CurColor.A;
+//
+//			}
+//		}
+//
+//		SourceTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+//
+//		DestinationTexture->UpdateResource();
+//
+//		DestinationTexture->Source.Init(col, row, 1, 1, DestinationTexture->Source.GetFormat(), Pixels);
+//	}
+//}
+
 void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTexture2D* DestinationTexture)
 {
-	if (!SourceTexture || !DestinationTexture)
+	if (DestinationTexture && SourceTexture)
 	{
-		return;
-	}
+		int32 NumMips = SourceTexture->GetPlatformData()->Mips.Num();
 
-	// Ensure the destination texture's platform data is initialized
-	if (!DestinationTexture->PlatformData)
-	{
-		DestinationTexture->PlatformData = new FTexturePlatformData();
-	}
-
-	// Copy basic properties
-	DestinationTexture->PlatformData->SizeX = SourceTexture->PlatformData->SizeX;
-	DestinationTexture->PlatformData->SizeY = SourceTexture->PlatformData->SizeY;
-	DestinationTexture->PlatformData->PixelFormat = SourceTexture->PlatformData->PixelFormat;
-	DestinationTexture->SRGB = SourceTexture->SRGB;
-
-	// Clear existing mipmaps in the destination texture
-	DestinationTexture->PlatformData->Mips.Empty();
-
-	int col = SourceTexture->GetPlatformData()->SizeX;
-	int row = SourceTexture->GetPlatformData()->SizeY;
-
-	// Copy each mip level
-	for (int32 MipIndex = 0; MipIndex < SourceTexture->GetPlatformData()->Mips.Num(); ++MipIndex)
-	{
-		//const FTexture2DMipMap& SourceMip = SourceTexture->GetPlatformData()->Mips[MipIndex];
-		//FTexture2DMipMap& DestMip = DestinationTexture->GetPlatformData()->Mips[MipIndex];
-		//DestMip.SizeX = SourceMip.SizeX;
-		//DestMip.SizeY = SourceMip.SizeY;
-		//DestMip.BulkData.Lock(LOCK_READ_WRITE);
-		//void* DestData = DestMip.BulkData.Realloc(SourceMip.BulkData.GetBulkDataSize());
-
-		FColor* InTextureColor = static_cast<FColor*>(SourceTexture->GetPlatformData()->Mips[MipIndex].BulkData.Lock(LOCK_READ_WRITE));
-
-		uint8* Pixels = new uint8[col * row * 4];
-		for (int r = 0; r <= row; r++)
+		int32 TotalSize = 0;
+		for (int32 MipIndex = 0; MipIndex < NumMips; ++MipIndex)
 		{
-			for (int c = 0; c <= col; c++)
-			{
-
-				FColor& CurColor = InTextureColor[(c + (r * col))];
-
-				int32 curPixelIndex = ((r * col) + c);
-				Pixels[4 * curPixelIndex] = CurColor.R;
-				Pixels[4 * curPixelIndex + 1] = CurColor.G;
-				Pixels[4 * curPixelIndex + 2] = CurColor.B;
-				Pixels[4 * curPixelIndex + 3] = CurColor.A;
-
-			}
+			FTexture2DMipMap& SourceMip = SourceTexture->GetPlatformData()->Mips[MipIndex];
+			TotalSize += SourceMip.SizeX * SourceMip.SizeY * 4;
 		}
 
-		SourceTexture->GetPlatformData()->Mips[MipIndex].BulkData.Unlock();
+		uint8* CombinedPixels = new uint8[TotalSize];
+		uint8* CurrentPtr = CombinedPixels;
 
-		DestinationTexture->Source.Init(col, row, SourceTexture->GetPlatformData()->GetNumSlices(), SourceTexture->GetNumMips(), SourceTexture->Source.GetFormat(), Pixels);
+		for (int32 MipIndex = 0; MipIndex < NumMips; ++MipIndex)
+		{
+			FTexture2DMipMap& SourceMip = SourceTexture->GetPlatformData()->Mips[MipIndex];
+			int32 Width = SourceMip.SizeX;
+			int32 Height = SourceMip.SizeY;
+			FColor* SourceColorData = static_cast<FColor*>(SourceMip.BulkData.Lock(LOCK_READ_WRITE));
+
+			for (int32 y = 0; y < Height; y++)
+			{
+				for (int32 x = 0; x < Width; x++)
+				{
+					int32 PixelIndex = x + y * Width;
+					FColor& CurColor = SourceColorData[PixelIndex];
+
+					CurrentPtr[4 * PixelIndex] = CurColor.R;
+					CurrentPtr[4 * PixelIndex + 1] = CurColor.G;
+					CurrentPtr[4 * PixelIndex + 2] = CurColor.B;
+					CurrentPtr[4 * PixelIndex + 3] = CurColor.A;
+				}
+			}
+
+			SourceMip.BulkData.Unlock();
+			CurrentPtr += Width * Height * 4;
+		}
+
+		DestinationTexture->Source.Init(SourceTexture->GetSizeX(), SourceTexture->GetSizeY(), 1, NumMips, DestinationTexture->Source.GetFormat(), CombinedPixels);
+		DestinationTexture->UpdateResource();
+
+		delete[] CombinedPixels;
 	}
-
-	// Update the destination texture resource
-	DestinationTexture->UpdateResource();
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Invalid source or destination texture."));
+	}
 }
+
+
+
 
 UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceTexture)
 {
