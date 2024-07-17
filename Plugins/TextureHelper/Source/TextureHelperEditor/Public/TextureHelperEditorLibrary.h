@@ -27,6 +27,22 @@ enum class ERotationMode : uint8
 	ROTATE_ANTICLOCKWISE UMETA(DisplayName = "Anti-clockwise"),
 };
 
+USTRUCT(BlueprintType)
+struct FMipPixelData {
+	GENERATED_BODY()
+public:
+
+	TArray<FColor> MipPixelColor;
+
+	FColor operator[] (int32 i) {
+		return MipPixelColor[i];
+	}
+
+	void Add(FColor color) {
+		MipPixelColor.Add(color);
+	}
+};
+
 /**
  * 
  */
@@ -81,7 +97,8 @@ public:
 
 private:
 
-	static TArray<FColor> BufferColorData;
+	//static TArray<FColor> BufferColorData;
+	static TArray<FMipPixelData> BufferColorData;
 
 	static UEngineWindowController* EngineWindowManager;
 };

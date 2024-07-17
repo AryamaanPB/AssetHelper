@@ -9,7 +9,7 @@
 
 #define LOCTEXT_NAMESPACE "TextureHelpers"
 
-TArray<FColor> UTextureHelperEditorLibrary::BufferColorData;
+TArray<FMipPixelData> UTextureHelperEditorLibrary::BufferColorData;
 
 UEngineWindowController* UTextureHelperEditorLibrary::EngineWindowManager = nullptr;
 
@@ -78,17 +78,17 @@ void UTextureHelperEditorLibrary::Negative(UTexture2D* InTexture)
 
 void UTextureHelperEditorLibrary::RotateTextureInPlace(UTexture2D* InTexture, ERotationMode RotationMode)
 {
-	if (!InTexture || !InTexture->PlatformData || InTexture->PlatformData->Mips.Num() == 0)
+	if (!InTexture || !InTexture->GetPlatformData() || InTexture->GetPlatformData()->Mips.Num() == 0)
 	{
 		return;
 	}
 
 	// Get the original texture dimensions
-	const int32 OriginalWidth = InTexture->PlatformData->Mips[0].SizeX;
-	const int32 OriginalHeight = InTexture->PlatformData->Mips[0].SizeY;
+	const int32 OriginalWidth = InTexture->GetPlatformData()->Mips[0].SizeX;
+	const int32 OriginalHeight = InTexture->GetPlatformData()->Mips[0].SizeY;
 
 	// Lock the texture's mipmap data for reading
-	uint8* OriginalMipData = static_cast<uint8*>(InTexture->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+	uint8* OriginalMipData = static_cast<uint8*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
 
 	// Create a temporary buffer for the rotated data
 	TArray<uint8> RotatedData;
@@ -118,16 +118,16 @@ void UTextureHelperEditorLibrary::RotateTextureInPlace(UTexture2D* InTexture, ER
 	}
 
 	// Reallocate the original texture to the new dimensions
-	InTexture->PlatformData->SizeX = OriginalHeight;
-	InTexture->PlatformData->SizeY = OriginalWidth;
-	InTexture->PlatformData->Mips[0].SizeX = OriginalHeight;
-	InTexture->PlatformData->Mips[0].SizeY = OriginalWidth;
+	InTexture->GetPlatformData()->SizeX = OriginalHeight;
+	InTexture->GetPlatformData()->SizeY = OriginalWidth;
+	InTexture->GetPlatformData()->Mips[0].SizeX = OriginalHeight;
+	InTexture->GetPlatformData()->Mips[0].SizeY = OriginalWidth;
 
 	// Copy the rotated data back into the original texture
 	FMemory::Memcpy(OriginalMipData, RotatedData.GetData(), RotatedData.Num());
 
 	// Unlock the texture data
-	InTexture->PlatformData->Mips[0].BulkData.Unlock();
+	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 
 	// Update the texture resource
 	InTexture->UpdateResource();
@@ -145,42 +145,46 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 
 	float ScaledTolerance = InTolerance * FMath::Sqrt(3.0);
 
-	int32 TextureHeight = InTexture->GetSizeY();
-	int32 TextureWidth = InTexture->GetSizeX();
-	FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
-
-	// Normalize the ChromaColor values to be in the range [0, 1]
-	FVector ChromaVector(ChromaColor.R / 255.0f, ChromaColor.G / 255.0f, ChromaColor.B / 255.0f);
-
-	for (int32 Y = 0; Y < TextureHeight; ++Y)
+	for (int MipIndex = 0; MipIndex < InTexture->GetNumMips(); ++MipIndex)
 	{
-		for (int32 X = 0; X < TextureWidth; ++X)
+		int32 TextureHeight = InTexture->GetPlatformData()->Mips[MipIndex].SizeY;
+		int32 TextureWidth = InTexture->GetPlatformData()->Mips[MipIndex].SizeX;
+		FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[MipIndex].BulkData.Lock(LOCK_READ_WRITE));
+
+		// Normalize the ChromaColor values to be in the range [0, 1]
+		FVector ChromaVector(ChromaColor.R / 255.0f, ChromaColor.G / 255.0f, ChromaColor.B / 255.0f);
+
+		for (int32 Y = 0; Y < TextureHeight; ++Y)
 		{
-			int32 Index = X + (Y * TextureWidth);
-			FColor& CurColor = InTextureColor[Index];
-			FColor& OriginalColor = BufferColorData[Index];
-
-			CurColor.A = OriginalColor.A;
-
-			if (InTolerance <= 0.001)
+			for (int32 X = 0; X < TextureWidth; ++X)
 			{
-				continue;
-			}
+				int32 Index = X + (Y * TextureWidth);
+				FColor& CurColor = InTextureColor[Index];
+				FColor OriginalColor = BufferColorData[MipIndex][Index];
 
-			// Normalize the current color values to be in the range [0, 1]
-			FVector CurVector(CurColor.R / 255.0f, CurColor.G / 255.0f, CurColor.B / 255.0f);
+				CurColor.A = OriginalColor.A;
 
-			// Calculate the distance in RGB color space
-			float ColorDiff = FVector::Dist(CurVector, ChromaVector);
+				if (InTolerance <= 0.001)
+				{
+					continue;
+				}
 
-			if (ColorDiff <= ScaledTolerance)
-			{
-				CurColor.A = 0;
+				// Normalize the current color values to be in the range [0, 1]
+				FVector CurVector(CurColor.R / 255.0f, CurColor.G / 255.0f, CurColor.B / 255.0f);
+
+				// Calculate the distance in RGB color space
+				float ColorDiff = FVector::Dist(CurVector, ChromaVector);
+
+				if (ColorDiff <= ScaledTolerance)
+				{
+					CurColor.A = 0;
+				}
 			}
 		}
+
+		InTexture->GetPlatformData()->Mips[MipIndex].BulkData.Unlock();
 	}
 
-	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 	InTexture->UpdateResource();
 }
 
@@ -191,8 +195,34 @@ void UTextureHelperEditorLibrary::BackupTexture(UTexture2D* InTexture)
 	{
 		return;
 	}
+	if (BufferColorData.Num() == 0)
+	{
+		BufferColorData.SetNum(InTexture->GetNumMips());
 
-	int32 TextureHeight = InTexture->GetSizeY();
+		for (int MipIndex = 0; MipIndex < InTexture->GetNumMips(); ++MipIndex)
+		{
+			int32 TextureHeight = InTexture->GetPlatformData()->Mips[MipIndex].SizeY;
+			int32 TextureWidth = InTexture->GetPlatformData()->Mips[MipIndex].SizeX;
+			FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[MipIndex].BulkData.Lock(LOCK_READ_WRITE));
+
+			if (!InTextureColor)
+			{
+				InTexture->GetPlatformData()->Mips[MipIndex].BulkData.Unlock();
+				continue;
+			}
+
+			// Backup the original texture data if not already backed up
+			if (BufferColorData[MipIndex].MipPixelColor.Num() == 0)
+			{
+				BufferColorData[MipIndex].MipPixelColor.SetNum(TextureWidth * TextureHeight);
+				FMemory::Memcpy(BufferColorData[MipIndex].MipPixelColor.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
+			}
+
+			InTexture->GetPlatformData()->Mips[MipIndex].BulkData.Unlock();
+		}
+	}
+
+	/*int32 TextureHeight = InTexture->GetSizeY();
 	int32 TextureWidth = InTexture->GetSizeX();
 	FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
 
@@ -200,13 +230,14 @@ void UTextureHelperEditorLibrary::BackupTexture(UTexture2D* InTexture)
 	if (BufferColorData.Num() == 0)
 	{
 		BufferColorData.SetNum(TextureWidth * TextureHeight);
-		FMemory::Memcpy(BufferColorData.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
+		//FMemory::Memcpy(BufferColorData.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
+		FMemory::Memcpy(BufferColorData[0].MipPixelColor.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
 	}
 
-	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();*/
 
-	/*
-	int32 NumMips = InTexture->GetPlatformData()->Mips.Num();
+	
+	/*int32 NumMips = InTexture->GetPlatformData()->Mips.Num();
 
 	int32 TotalSize = 0;
 	for (int32 MipIndex = 0; MipIndex < NumMips; ++MipIndex)
@@ -232,8 +263,7 @@ void UTextureHelperEditorLibrary::BackupTexture(UTexture2D* InTexture)
 		CurrentPtr += Width * Height * 4;
 	}
 
-	delete[] CombinedPixels;
-	*/
+	delete[] CombinedPixels;*/
 }
 
 UTexture2D* UTextureHelperEditorLibrary::CreateCheckeredTexture()
@@ -244,13 +274,13 @@ UTexture2D* UTextureHelperEditorLibrary::CreateCheckeredTexture()
 
 	// Create a transient UTexture2D
 	UTexture2D* NewTexture = UTexture2D::CreateTransient(TextureWidth, TextureHeight, PF_B8G8R8A8);
-	if (!NewTexture || !NewTexture->PlatformData)
+	if (!NewTexture || !NewTexture->GetPlatformData())
 	{
 		return nullptr;
 	}
 
 	// Ensure the texture has at least one mipmap
-	FTexture2DMipMap& Mip = NewTexture->PlatformData->Mips[0];
+	FTexture2DMipMap& Mip = NewTexture->GetPlatformData()->Mips[0];
 	Mip.SizeX = TextureWidth;
 	Mip.SizeY = TextureHeight;
 	Mip.BulkData.Lock(LOCK_READ_WRITE);
@@ -361,11 +391,11 @@ void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 	int32 TextureWidth = WorkingTexture->GetSizeX();
 	int32 TextureHeight = WorkingTexture->GetSizeY();
 	NewTexture->AddToRoot();
-	NewTexture->PlatformData = new FTexturePlatformData();
-	NewTexture->PlatformData->SizeX = TextureWidth;
-	NewTexture->PlatformData->SizeY = TextureHeight;
-	NewTexture->PlatformData->SetNumSlices(WorkingTexture->GetPlatformData()->GetNumSlices());
-	NewTexture->PlatformData->PixelFormat = WorkingTexture->GetPlatformData()->PixelFormat;
+	NewTexture->GetPlatformData() = new FTexturePlatformData();
+	NewTexture->GetPlatformData()->SizeX = TextureWidth;
+	NewTexture->GetPlatformData()->SizeY = TextureHeight;
+	NewTexture->GetPlatformData()->SetNumSlices(WorkingTexture->GetPlatformData()->GetNumSlices());
+	NewTexture->GetPlatformData()->PixelFormat = WorkingTexture->GetPlatformData()->PixelFormat;
 
 	CopyTexture(WorkingTexture, NewTexture);
 
@@ -378,7 +408,7 @@ void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 	ObjectsToSave.Add(NewTexture);
 	FEditorFileUtils::SaveAssetsAs(ObjectsToSave, SavedObjects);
 
-	if (NewTexture && NewTexture->PlatformData)
+	if (NewTexture && NewTexture->GetPlatformData())
 	{
 		NewTexture->UpdateResource();
 		Package->MarkPackageDirty();
@@ -508,9 +538,6 @@ void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTextur
 	}
 }
 
-
-
-
 UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceTexture)
 {
 	if (!SourceTexture)
@@ -531,16 +558,24 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 	}
 
 	// Create new platform data
-	NewTexture->PlatformData = new FTexturePlatformData();
-	NewTexture->PlatformData->SizeX = SourceTexture->PlatformData->SizeX;
-	NewTexture->PlatformData->SizeY = SourceTexture->PlatformData->SizeY;
-	NewTexture->PlatformData->PixelFormat = SourceTexture->PlatformData->PixelFormat;
+	NewTexture->SetPlatformData(new FTexturePlatformData());
+	FTexturePlatformData* NewPlatformData = NewTexture->GetPlatformData();
+	const FTexturePlatformData* SourcePlatformData = SourceTexture->GetPlatformData();
+
+	NewPlatformData->SizeX = SourcePlatformData->SizeX;
+	NewPlatformData->SizeY = SourcePlatformData->SizeY;
+	NewPlatformData->PixelFormat = SourcePlatformData->PixelFormat;
+
+	// Copy additional properties
+	NewTexture->SRGB = SourceTexture->SRGB;
+	NewPlatformData->Mips.Reset(SourcePlatformData->Mips.Num());
 
 	// Copy mip data
-	for (int32 MipIndex = 0; MipIndex < SourceTexture->PlatformData->Mips.Num(); ++MipIndex)
+	for (int32 MipIndex = 0; MipIndex < SourcePlatformData->Mips.Num(); ++MipIndex)
 	{
-		const FTexture2DMipMap& SourceMip = SourceTexture->PlatformData->Mips[MipIndex];
+		const FTexture2DMipMap& SourceMip = SourcePlatformData->Mips[MipIndex];
 		FTexture2DMipMap* DestMip = new FTexture2DMipMap();
+		NewPlatformData->Mips.Add(DestMip);
 
 		DestMip->SizeX = SourceMip.SizeX;
 		DestMip->SizeY = SourceMip.SizeY;
@@ -550,22 +585,21 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 		void* DestData = DestMip->BulkData.Realloc(SourceMip.BulkData.GetBulkDataSize());
 		const void* SourceData = SourceMip.BulkData.LockReadOnly();
 
-		FMemory::Memcpy(DestData, SourceData, SourceMip.BulkData.GetBulkDataSize());
+		if (SourceData && DestData)
+		{
+			FMemory::Memcpy(DestData, SourceData, SourceMip.BulkData.GetBulkDataSize());
+		}
 
 		SourceMip.BulkData.Unlock();
 		DestMip->BulkData.Unlock();
-
-		NewTexture->PlatformData->Mips.Add(DestMip);
 	}
-
-	// Copy additional properties
-	NewTexture->SRGB = SourceTexture->SRGB;
 
 	// Update the resource
 	NewTexture->UpdateResource();
 
 	return NewTexture;
 }
+
 
 UEngineWindowController* UTextureHelperEditorLibrary::PickColor()
 {
