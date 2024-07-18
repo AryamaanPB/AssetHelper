@@ -542,6 +542,7 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 {
 	if (!SourceTexture)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("SourceTexture is null"));
 		return nullptr;
 	}
 
@@ -554,6 +555,7 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 
 	if (!NewTexture)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to create NewTexture"));
 		return nullptr;
 	}
 
@@ -561,6 +563,12 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 	NewTexture->SetPlatformData(new FTexturePlatformData());
 	FTexturePlatformData* NewPlatformData = NewTexture->GetPlatformData();
 	const FTexturePlatformData* SourcePlatformData = SourceTexture->GetPlatformData();
+
+	if (!NewPlatformData || !SourcePlatformData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Platform data is null"));
+		return nullptr;
+	}
 
 	NewPlatformData->SizeX = SourcePlatformData->SizeX;
 	NewPlatformData->SizeY = SourcePlatformData->SizeY;
@@ -584,6 +592,15 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 		DestMip->BulkData.Lock(LOCK_READ_WRITE);
 		void* DestData = DestMip->BulkData.Realloc(SourceMip.BulkData.GetBulkDataSize());
 		const void* SourceData = SourceMip.BulkData.LockReadOnly();
+
+		if (!SourceData)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("SourceData is null for MipIndex %d"), MipIndex);
+		}
+		if (!DestData)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Failed to allocate DestData for MipIndex %d"), MipIndex);
+		}
 
 		if (SourceData && DestData)
 		{
