@@ -578,8 +578,10 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 	NewTexture->SRGB = SourceTexture->SRGB;
 	NewPlatformData->Mips.Reset(SourcePlatformData->Mips.Num());
 
+	int maxNumMips = SourcePlatformData->Mips.Num();
+
 	// Copy mip data
-	for (int32 MipIndex = 0; MipIndex < SourcePlatformData->Mips.Num(); ++MipIndex)
+	for (int32 MipIndex = 0; MipIndex < maxNumMips; ++MipIndex)
 	{
 		const FTexture2DMipMap& SourceMip = SourcePlatformData->Mips[MipIndex];
 		FTexture2DMipMap* DestMip = new FTexture2DMipMap();
@@ -589,8 +591,12 @@ UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceText
 		DestMip->SizeY = SourceMip.SizeY;
 
 		// Allocate memory for the mip data
-		DestMip->BulkData.Lock(LOCK_READ_WRITE);
-		void* DestData = DestMip->BulkData.Realloc(SourceMip.BulkData.GetBulkDataSize());
+		/*DestMip->BulkData.Lock(LOCK_READ_WRITE);
+		DestMip->BulkData.Realloc(SourceMip.BulkData.GetBulkDataSize());
+		DestMip->BulkData.Unlock();*/
+
+		NewPlatformData->Mips[MipIndex].BulkData.Lock(LOCK_READ_WRITE);
+		void* DestData = NewPlatformData->Mips[MipIndex].BulkData.Realloc(SourceMip.BulkData.GetBulkDataSize());
 		const void* SourceData = SourceMip.BulkData.LockReadOnly();
 
 		if (!SourceData)
