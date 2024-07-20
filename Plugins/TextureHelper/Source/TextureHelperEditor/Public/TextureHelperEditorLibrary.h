@@ -97,8 +97,8 @@ public:
 
 private:
 
-	//static TArray<FColor> BufferColorData;
-	static TArray<FMipPixelData> BufferColorData;
+	static TArray<FColor> BufferColorData;
+	//static TArray<FMipPixelData> BufferColorData;
 
 	static UEngineWindowController* EngineWindowManager;
 };
