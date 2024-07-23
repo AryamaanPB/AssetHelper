@@ -144,6 +144,11 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 
 	BackupTexture(InTexture);
 
+	if (BufferColorData.Num() == 0)
+	{
+		return;
+	}
+
 	float ScaledTolerance = InTolerance * FMath::Sqrt(3.0);
 
 	int32 TextureHeight = InTexture->GetSizeY();
@@ -403,8 +408,8 @@ void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTextur
 {
 	if (DestinationTexture && SourceTexture)
 	{
-		int32 row = DestinationTexture->GetSizeY();
-		int32 col = DestinationTexture->GetSizeX();
+		int32 row = SourceTexture->GetSizeY();
+		int32 col = SourceTexture->GetSizeX();
 		FColor* InTextureColor = static_cast<FColor*>(SourceTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
 
 		uint8* Pixels = new uint8[col * row * 4];
@@ -414,9 +419,6 @@ void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTextur
 			{
 
 				FColor& CurColor = InTextureColor[(c + (r * col))];
-
-				uint8 avg = (CurColor.R + CurColor.G + CurColor.B) / 3;
-				//	change color
 
 				int32 curPixelIndex = ((r * col) + c);
 				Pixels[4 * curPixelIndex] = CurColor.R;
@@ -429,9 +431,9 @@ void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTextur
 
 		SourceTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 
-		DestinationTexture->UpdateResource();
-
 		DestinationTexture->Source.Init(col, row, 1, 1, DestinationTexture->Source.GetFormat(), Pixels);
+
+		DestinationTexture->UpdateResource();
 	}
 }
 
