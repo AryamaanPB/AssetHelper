@@ -9,7 +9,6 @@
 
 #define LOCTEXT_NAMESPACE "TextureHelpers"
 
-//TArray<FMipPixelData> UTextureHelperEditorLibrary::BufferColorData;
 TArray<FColor> UTextureHelperEditorLibrary::BufferColorData;
 
 UEngineWindowController* UTextureHelperEditorLibrary::EngineWindowManager = nullptr;
@@ -201,10 +200,11 @@ void UTextureHelperEditorLibrary::BackupTexture(UTexture2D* InTexture)
 	int32 TextureHeight = InTexture->GetSizeY();
 	int32 TextureWidth = InTexture->GetSizeX();
 
-	TEnumAsByte<TextureMipGenSettings> cachedMipGenSettings = InTexture->MipGenSettings;
+	TextureMipGenSettings cacheMipGenSettings = InTexture->MipGenSettings;
 	InTexture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
 	InTexture->UpdateResource();
 
+	
 	FColor* InTextureColor = static_cast<FColor*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
 
 	// Backup the original texture data if not already backed up
@@ -213,12 +213,12 @@ void UTextureHelperEditorLibrary::BackupTexture(UTexture2D* InTexture)
 		BufferColorData.SetNum(TextureWidth * TextureHeight);
 		FMemory::Memcpy(BufferColorData.GetData(), InTextureColor, TextureWidth * TextureHeight * sizeof(FColor));
 	}
-
 	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 
-	InTexture->MipGenSettings = cachedMipGenSettings;
+	InTexture->MipGenSettings = cacheMipGenSettings;
 	InTexture->UpdateResource();
 }
+
 
 UTexture2D* UTextureHelperEditorLibrary::CreateCheckeredTexture()
 {
