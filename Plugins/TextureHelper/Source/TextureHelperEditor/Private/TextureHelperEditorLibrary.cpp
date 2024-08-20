@@ -141,10 +141,11 @@ void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor
 		return;
 	}
 
-	BackupTexture(InTexture);
+	//BackupTexture(InTexture);
 
 	if (BufferColorData.Num() == 0)
 	{
+		BackupTexture(InTexture);
 		return;
 	}
 
@@ -421,9 +422,14 @@ void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTextur
 				FColor& CurColor = InTextureColor[(c + (r * col))];
 
 				int32 curPixelIndex = ((r * col) + c);
-				Pixels[4 * curPixelIndex] = CurColor.R;
+				/*Pixels[4 * curPixelIndex] = CurColor.R;
 				Pixels[4 * curPixelIndex + 1] = CurColor.G;
 				Pixels[4 * curPixelIndex + 2] = CurColor.B;
+				Pixels[4 * curPixelIndex + 3] = CurColor.A;*/
+
+				Pixels[4 * curPixelIndex] = CurColor.B;
+				Pixels[4 * curPixelIndex + 1] = CurColor.G;
+				Pixels[4 * curPixelIndex + 2] = CurColor.R;
 				Pixels[4 * curPixelIndex + 3] = CurColor.A;
 
 			}
