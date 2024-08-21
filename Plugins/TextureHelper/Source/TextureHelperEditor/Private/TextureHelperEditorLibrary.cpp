@@ -411,34 +411,36 @@ void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTextur
 	{
 		int32 row = SourceTexture->GetSizeY();
 		int32 col = SourceTexture->GetSizeX();
-		FColor* InTextureColor = static_cast<FColor*>(SourceTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
 
-		uint8* Pixels = new uint8[col * row * 4];
-		for (int r = 0; r <= row; r++)
+		// Lock the source texture data
+		FTexture2DMipMap& SourceMip = SourceTexture->GetPlatformData()->Mips[0];
+		FColor* InTextureColor = static_cast<FColor*>(SourceMip.BulkData.Lock(LOCK_READ_ONLY));
+
+		// Get the destination texture format
+		ETextureSourceFormat DestFormat = DestinationTexture->Source.GetFormat();
+
+		// Initialize the destination texture with its current format
+		DestinationTexture->Source.Init(col, row, 1, 1, DestFormat);
+
+		// Lock the destination texture data
+		FTexture2DMipMap& DestMip = DestinationTexture->GetPlatformData()->Mips[0];
+		FColor* OutTextureColor = static_cast<FColor*>(DestMip.BulkData.Lock(LOCK_READ_WRITE));
+
+		// Copy the pixel data
+		for (int r = 0; r < row; r++)
 		{
-			for (int c = 0; c <= col; c++)
+			for (int c = 0; c < col; c++)
 			{
-
-				FColor& CurColor = InTextureColor[(c + (r * col))];
-
-				int32 curPixelIndex = ((r * col) + c);
-				/*Pixels[4 * curPixelIndex] = CurColor.R;
-				Pixels[4 * curPixelIndex + 1] = CurColor.G;
-				Pixels[4 * curPixelIndex + 2] = CurColor.B;
-				Pixels[4 * curPixelIndex + 3] = CurColor.A;*/
-
-				Pixels[4 * curPixelIndex] = CurColor.B;
-				Pixels[4 * curPixelIndex + 1] = CurColor.G;
-				Pixels[4 * curPixelIndex + 2] = CurColor.R;
-				Pixels[4 * curPixelIndex + 3] = CurColor.A;
-
+				int32 Index = c + (r * col);
+				OutTextureColor[Index] = InTextureColor[Index];
 			}
 		}
 
-		SourceTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+		// Unlock both textures
+		SourceMip.BulkData.Unlock();
+		DestMip.BulkData.Unlock();
 
-		DestinationTexture->Source.Init(col, row, 1, 1, DestinationTexture->Source.GetFormat(), Pixels);
-
+		// Update the destination texture resource
 		DestinationTexture->UpdateResource();
 	}
 }
