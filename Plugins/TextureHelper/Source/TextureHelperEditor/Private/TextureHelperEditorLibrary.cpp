@@ -5,6 +5,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "FileHelpers.h"
 #include "IContentBrowserSingleton.h"
+#include "RHI.h"
 #include "ContentBrowserModule.h"
 
 #define LOCTEXT_NAMESPACE "TextureHelpers"
@@ -335,29 +336,55 @@ static bool OpenSaveAsDialog(UClass* SavedClass, const FString& InDefaultPath, c
 
 void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 {
-	/*
 	FString PackageName = TEXT("/Game/kitty45");
 	//OpenSaveAsDialog(UTexture2D::StaticClass(), TEXT("/Game/"), TEXT("NewTexture"), PackageName);
-
 	UPackage* Package = CreatePackage(*PackageName);
 	Package->FullyLoad();
-
+	
+	
+	// Create a new UTexture2D object
 	UTexture2D* NewTexture = NewObject<UTexture2D>(Package, TEXT("kitty45"), RF_Public | RF_Standalone | RF_MarkAsRootSet);
+	NewTexture->AddToRoot();
+
+	// Get the size and format of the working texture
 	int32 TextureWidth = WorkingTexture->GetSizeX();
 	int32 TextureHeight = WorkingTexture->GetSizeY();
-	NewTexture->AddToRoot();
-	NewTexture->GetPlatformData() = new FTexturePlatformData();
-	NewTexture->GetPlatformData()->SizeX = TextureWidth;
-	NewTexture->GetPlatformData()->SizeY = TextureHeight;
-	NewTexture->GetPlatformData()->SetNumSlices(WorkingTexture->GetPlatformData()->GetNumSlices());
-	NewTexture->GetPlatformData()->PixelFormat = WorkingTexture->GetPlatformData()->PixelFormat;
+	EPixelFormat PixelFormat = WorkingTexture->GetPlatformData()->PixelFormat;
 
+	// Initialize the platform data for the new texture
+	FTexturePlatformData* NewPlatformData = new FTexturePlatformData();
+	NewPlatformData->SizeX = TextureWidth;
+	NewPlatformData->SizeY = TextureHeight;
+	NewPlatformData->SetNumSlices(1);  // Typically 1 for a 2D texture
+	NewPlatformData->PixelFormat = PixelFormat;
+
+	// Create a new mip map for the texture and initialize it
+	FTexture2DMipMap* NewMip = new FTexture2DMipMap();
+	NewPlatformData->Mips.Add(NewMip);
+	NewMip->SizeX = TextureWidth;
+	NewMip->SizeY = TextureHeight;
+
+	// Allocate memory for the mip level and initialize it
+	int32 MipBytes = CalculateImageBytes(TextureWidth, TextureHeight, 0, PixelFormat);
+	NewMip->BulkData.Lock(LOCK_READ_WRITE);
+	void* TextureData = NewMip->BulkData.Realloc(MipBytes);
+	FMemory::Memzero(TextureData, MipBytes);  // Clear memory to ensure it's initialized
+	NewMip->BulkData.Unlock();
+
+	// Assign the platform data to the new texture
+	NewTexture->SetPlatformData(NewPlatformData);
+
+	// Initialize the source data for the new texture with the correct format
+	NewTexture->Source.Init(TextureWidth, TextureHeight, 1, 1, WorkingTexture->Source.GetFormat());
+
+	// Copy the texture data from the working texture to the new texture
 	CopyTexture(WorkingTexture, NewTexture);
 
+	// Update the resource to apply the copied data
 	NewTexture->UpdateResource();
 	Package->FullyLoad();
 
-	// save assets under new name
+	// Save the new texture as an asset
 	TArray<UObject*> SavedObjects;
 	TArray<UObject*> ObjectsToSave;
 	ObjectsToSave.Add(NewTexture);
@@ -381,7 +408,6 @@ void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 			UE_LOG(LogTemp, Error, TEXT("Failed to save the texture."));
 		}
 	}
-	*/
 }
 
 void UTextureHelperEditorLibrary::Clear()
