@@ -336,12 +336,10 @@ static bool OpenSaveAsDialog(UClass* SavedClass, const FString& InDefaultPath, c
 
 void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 {
-	FString PackageName = TEXT("/Game/kitty45");
-	//OpenSaveAsDialog(UTexture2D::StaticClass(), TEXT("/Game/"), TEXT("NewTexture"), PackageName);
+	FString PackageName = TEXT("/Game/Image");
 	UPackage* Package = CreatePackage(*PackageName);
 	Package->FullyLoad();
-	
-	
+
 	// Create a new UTexture2D object
 	UTexture2D* NewTexture = NewObject<UTexture2D>(Package, TEXT("kitty45"), RF_Public | RF_Standalone | RF_MarkAsRootSet);
 	NewTexture->AddToRoot();
@@ -355,14 +353,13 @@ void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 	FTexturePlatformData* NewPlatformData = new FTexturePlatformData();
 	NewPlatformData->SizeX = TextureWidth;
 	NewPlatformData->SizeY = TextureHeight;
-	NewPlatformData->SetNumSlices(1);  // Typically 1 for a 2D texture
 	NewPlatformData->PixelFormat = PixelFormat;
 
 	// Create a new mip map for the texture and initialize it
 	FTexture2DMipMap* NewMip = new FTexture2DMipMap();
-	NewPlatformData->Mips.Add(NewMip);
 	NewMip->SizeX = TextureWidth;
 	NewMip->SizeY = TextureHeight;
+	NewPlatformData->Mips.Add(NewMip);
 
 	// Allocate memory for the mip level and initialize it
 	int32 MipBytes = CalculateImageBytes(TextureWidth, TextureHeight, 0, PixelFormat);
@@ -373,9 +370,6 @@ void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 
 	// Assign the platform data to the new texture
 	NewTexture->SetPlatformData(NewPlatformData);
-
-	// Initialize the source data for the new texture with the correct format
-	NewTexture->Source.Init(TextureWidth, TextureHeight, 1, 1, WorkingTexture->Source.GetFormat());
 
 	// Copy the texture data from the working texture to the new texture
 	CopyTexture(WorkingTexture, NewTexture);
@@ -433,43 +427,44 @@ UTexture2D* UTextureHelperEditorLibrary::DisplayTexture(UTexture2D* TextureAsset
 
 void UTextureHelperEditorLibrary::CopyTexture(UTexture2D* SourceTexture, UTexture2D* DestinationTexture)
 {
-	if (DestinationTexture && SourceTexture)
+	if (SourceTexture && DestinationTexture)
 	{
-		int32 row = SourceTexture->GetSizeY();
-		int32 col = SourceTexture->GetSizeX();
+		// Get the size and format of the source texture
+		int32 TextureWidth = SourceTexture->GetSizeX();
+		int32 TextureHeight = SourceTexture->GetSizeY();
+		ETextureSourceFormat SourceFormat = SourceTexture->Source.GetFormat();
+		SourceFormat = SourceFormat == TSF_Invalid ? TSF_BGRA8 : SourceFormat; //TODO: avoid this by ensuring SourceTexture has a Texture Source Format
+		EPixelFormat PixelFormat = SourceTexture->GetPlatformData()->PixelFormat;
+
+		// Determine bytes per pixel based on the pixel format
+		int32 BytesPerPixel = GPixelFormats[PixelFormat].BlockBytes;
 
 		// Lock the source texture data
 		FTexture2DMipMap& SourceMip = SourceTexture->GetPlatformData()->Mips[0];
-		FColor* InTextureColor = static_cast<FColor*>(SourceMip.BulkData.Lock(LOCK_READ_ONLY));
+		const uint8* SourceData = static_cast<const uint8*>(SourceMip.BulkData.Lock(LOCK_READ_ONLY));
 
-		// Get the destination texture format
-		ETextureSourceFormat DestFormat = DestinationTexture->Source.GetFormat();
+		// Calculate the number of bytes needed
+		int32 NumBytes = TextureWidth * TextureHeight * BytesPerPixel;
 
-		// Initialize the destination texture with its current format
-		DestinationTexture->Source.Init(col, row, 1, 1, DestFormat);
+		// Copy the source texture data into a new uint8 array
+		uint8* RawData = new uint8[NumBytes];
+		FMemory::Memcpy(RawData, SourceData, NumBytes);
 
-		// Lock the destination texture data
-		FTexture2DMipMap& DestMip = DestinationTexture->GetPlatformData()->Mips[0];
-		FColor* OutTextureColor = static_cast<FColor*>(DestMip.BulkData.Lock(LOCK_READ_WRITE));
-
-		// Copy the pixel data
-		for (int r = 0; r < row; r++)
-		{
-			for (int c = 0; c < col; c++)
-			{
-				int32 Index = c + (r * col);
-				OutTextureColor[Index] = InTextureColor[Index];
-			}
-		}
-
-		// Unlock both textures
+		// Unlock the source texture data
 		SourceMip.BulkData.Unlock();
-		DestMip.BulkData.Unlock();
+
+		// Initialize the destination texture with the copied data
+		DestinationTexture->Source.Init(TextureWidth, TextureHeight, 1, 1, SourceFormat, RawData);
+
+		// Free the allocated memory
+		delete[] RawData;
 
 		// Update the destination texture resource
 		DestinationTexture->UpdateResource();
 	}
 }
+
+
 
 UTexture2D* UTextureHelperEditorLibrary::DuplicateTexture(UTexture2D* SourceTexture)
 {
