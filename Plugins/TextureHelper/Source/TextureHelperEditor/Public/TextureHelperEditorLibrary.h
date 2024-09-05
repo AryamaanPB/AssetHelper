@@ -63,6 +63,9 @@ public:
 	static void RotateTextureInPlace(UTexture2D* InTexture, ERotationMode RotationMode);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void FlipTextureHorizontally(UTexture2D* InTexture);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")

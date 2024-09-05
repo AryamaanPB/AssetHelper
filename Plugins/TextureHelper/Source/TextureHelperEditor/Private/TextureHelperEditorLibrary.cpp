@@ -135,6 +135,51 @@ void UTextureHelperEditorLibrary::RotateTextureInPlace(UTexture2D* InTexture, ER
 
 }
 
+void UTextureHelperEditorLibrary::FlipTextureHorizontally(UTexture2D* InTexture)
+{
+	if (!InTexture || !InTexture->GetPlatformData() || InTexture->GetPlatformData()->Mips.Num() == 0)
+	{
+		return;
+	}
+
+	// Get the original texture dimensions
+	const int32 Width = InTexture->GetPlatformData()->Mips[0].SizeX;
+	const int32 Height = InTexture->GetPlatformData()->Mips[0].SizeY;
+
+	// Lock the texture's mipmap data for reading
+	uint8* OriginalMipData = static_cast<uint8*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+
+	// Create a temporary buffer for the flipped data
+	TArray<uint8> FlippedData;
+	FlippedData.SetNumUninitialized(Width * Height * 4);
+
+	// Fill the temporary buffer with the flipped data
+	for (int32 Y = 0; Y < Height; ++Y)
+	{
+		for (int32 X = 0; X < Width; ++X)
+		{
+			int32 OriginalIndex = ((Y * Width) + X) * 4;
+			int32 FlippedIndex = ((Y * Width) + (Width - 1 - X)) * 4;
+
+			// Copy pixel data (Blue, Green, Red, Alpha)
+			FlippedData[FlippedIndex + 0] = OriginalMipData[OriginalIndex + 0]; // Blue
+			FlippedData[FlippedIndex + 1] = OriginalMipData[OriginalIndex + 1]; // Green
+			FlippedData[FlippedIndex + 2] = OriginalMipData[OriginalIndex + 2]; // Red
+			FlippedData[FlippedIndex + 3] = OriginalMipData[OriginalIndex + 3]; // Alpha
+		}
+	}
+
+	// Copy the flipped data back into the original texture
+	FMemory::Memcpy(OriginalMipData, FlippedData.GetData(), FlippedData.Num());
+
+	// Unlock the texture data
+	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+
+	// Update the texture resource
+	InTexture->UpdateResource();
+}
+
+
 void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance)
 {
 	if (!InTexture || !InTexture->GetPlatformData())
