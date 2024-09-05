@@ -135,7 +135,7 @@ void UTextureHelperEditorLibrary::RotateTextureInPlace(UTexture2D* InTexture, ER
 
 }
 
-void UTextureHelperEditorLibrary::FlipTextureHorizontally(UTexture2D* InTexture)
+void UTextureHelperEditorLibrary::FlipTexture(UTexture2D* InTexture, EOrientationMode InOrientation)
 {
 	if (!InTexture || !InTexture->GetPlatformData() || InTexture->GetPlatformData()->Mips.Num() == 0)
 	{
@@ -159,7 +159,21 @@ void UTextureHelperEditorLibrary::FlipTextureHorizontally(UTexture2D* InTexture)
 		for (int32 X = 0; X < Width; ++X)
 		{
 			int32 OriginalIndex = ((Y * Width) + X) * 4;
-			int32 FlippedIndex = ((Y * Width) + (Width - 1 - X)) * 4;
+
+			int32 FlippedIndex;
+
+			switch (InOrientation)
+			{
+			case EOrientationMode::ORIENTATION_HORIZONTAL:
+				FlippedIndex = ((Y * Width) + (Width - 1 - X)) * 4;
+				break;
+			case EOrientationMode::ORIENTATION_VERTICAL:
+				FlippedIndex = (((Height - 1 - Y) * Width) + X) * 4;
+				break;
+			default:
+				UE_LOG(LogTemp, Display, TEXT("No orientation selected"));
+				return;
+			}
 
 			// Copy pixel data (Blue, Green, Red, Alpha)
 			FlippedData[FlippedIndex + 0] = OriginalMipData[OriginalIndex + 0]; // Blue

@@ -27,6 +27,13 @@ enum class ERotationMode : uint8
 	ROTATE_ANTICLOCKWISE UMETA(DisplayName = "Anti-clockwise"),
 };
 
+UENUM(BlueprintType)
+enum class EOrientationMode : uint8
+{
+	ORIENTATION_HORIZONTAL UMETA(DisplayName = "Horizontal"),
+	ORIENTATION_VERTICAL UMETA(DisplayName = "Vertical"),
+};
+
 USTRUCT(BlueprintType)
 struct FMipPixelData {
 	GENERATED_BODY()
@@ -63,7 +70,7 @@ public:
 	static void RotateTextureInPlace(UTexture2D* InTexture, ERotationMode RotationMode);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
-	static void FlipTextureHorizontally(UTexture2D* InTexture);
+	static void FlipTexture(UTexture2D* InTexture, EOrientationMode InOrientation);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance);
