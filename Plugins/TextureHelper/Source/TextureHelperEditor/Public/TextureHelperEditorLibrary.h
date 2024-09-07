@@ -73,6 +73,12 @@ public:
 	static void FlipTexture(UTexture2D* InTexture, EOrientationMode InOrientation);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static FVector2D GetGameResolution();
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void EraseTextureArea(UTexture2D* InTexture, const FVector2D& Center, float Radius);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
