@@ -193,18 +193,6 @@ void UTextureHelperEditorLibrary::FlipTexture(UTexture2D* InTexture, EOrientatio
 	InTexture->UpdateResource();
 }
 
-
-FVector2D UTextureHelperEditorLibrary::GetGameResolution()
-{
-	FVector2D Result = FVector2D(1, 1);
-
-	Result.X = GSystemResolution.ResX;
-	Result.Y = GSystemResolution.ResY;
-
-	return Result;
-}
-
-
 void UTextureHelperEditorLibrary::EraseTextureArea(UTexture2D* InTexture, const FVector2D& Center, float Radius = 0.1)
 {
 	if (!InTexture || !InTexture->GetPlatformData() || InTexture->GetPlatformData()->Mips.Num() == 0)
@@ -213,8 +201,8 @@ void UTextureHelperEditorLibrary::EraseTextureArea(UTexture2D* InTexture, const 
 	}
 
 	// Get the texture dimensions
-	const int32 Width = InTexture->GetPlatformData()->Mips[0].SizeX;
-	const int32 Height = InTexture->GetPlatformData()->Mips[0].SizeY;
+	const int32 Width = InTexture->GetSizeX();
+	const int32 Height = InTexture->GetSizeY();
 
 	// Lock the texture's mipmap data for reading and writing
 	uint8* MipData = static_cast<uint8*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
@@ -260,6 +248,60 @@ void UTextureHelperEditorLibrary::EraseTextureArea(UTexture2D* InTexture, const 
 	// Update the texture resource to apply the changes
 	InTexture->UpdateResource();
 }
+
+void UTextureHelperEditorLibrary::PaintOverTexture(UTexture2D* InTexture, const FVector2D& Center, FColor InColor, float Radius = 0.1)
+{
+	if (!InTexture || !InTexture->GetPlatformData() || InTexture->GetPlatformData()->Mips.Num() == 0)
+	{
+		return;
+	}
+
+	// Get the texture dimensions
+	const int32 Width = InTexture->GetSizeX();
+	const int32 Height = InTexture->GetSizeY();
+
+	// Lock the texture's mipmap data for reading and writing
+	uint8* MipData = static_cast<uint8*>(InTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+
+	// Create an FColor buffer to manipulate pixel data
+	TArray<FColor> PixelData;
+	PixelData.SetNumUninitialized(Width * Height);
+
+	// Radius squared to optimize the distance check
+	const float RadiusSquared = Radius * Radius;
+
+	// Iterate through each pixel of the texture
+	for (int32 Y = 0; Y < Height; ++Y)
+	{
+		for (int32 X = 0; X < Width; ++X)
+		{
+			// Calculate the index for the pixel
+			int32 PixelIndex = (Y * Width) + X;
+
+			// Calculate the distance squared from the center point
+			float DistSquared = FVector2D::DistSquared(FVector2D(X, Y), Center);
+
+			// If the pixel is within the radius threshold, erase it (set alpha to 0)
+			if (DistSquared <= RadiusSquared)
+			{
+				// Read the pixel color
+				FColor* PixelColor = reinterpret_cast<FColor*>(MipData + PixelIndex * sizeof(FColor));
+
+				// Optionally, modify other color channels (e.g., clear RGB to make the pixel fully black/transparent)
+				PixelColor->R = InColor.R;
+				PixelColor->G = InColor.G;
+				PixelColor->B = InColor.B;
+			}
+		}
+	}
+
+	// Unlock the texture data after making changes
+	InTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+
+	// Update the texture resource to apply the changes
+	InTexture->UpdateResource();
+}
+
 
 
 void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance)
