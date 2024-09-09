@@ -79,6 +79,9 @@ public:
 	static void PaintOverTexture(UTexture2D* InTexture, const FVector2D& Center, FColor InColor, float Radius);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
+	static void CombineTexture(UTexture2D* MainTexture, UTexture2D* OverlayTexture, const FVector2D& Center);
+
+	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")

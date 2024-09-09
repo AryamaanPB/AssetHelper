@@ -302,6 +302,93 @@ void UTextureHelperEditorLibrary::PaintOverTexture(UTexture2D* InTexture, const 
 	InTexture->UpdateResource();
 }
 
+void UTextureHelperEditorLibrary::CombineTexture(UTexture2D* MainTexture, UTexture2D* OverlayTexture, const FVector2D& Center)
+{
+	if (!MainTexture || !OverlayTexture || !MainTexture->GetPlatformData() || !OverlayTexture->GetPlatformData() ||
+		MainTexture->GetPlatformData()->Mips.Num() == 0 || OverlayTexture->GetPlatformData()->Mips.Num() == 0)
+	{
+		return;
+	}
+
+	// Get dimensions of both textures
+	const int32 MainWidth = MainTexture->GetSizeX();
+	const int32 MainHeight = MainTexture->GetSizeY();
+	const int32 OverlayWidth = OverlayTexture->GetSizeX();
+	const int32 OverlayHeight = OverlayTexture->GetSizeY();
+
+	// Lock both textures' mipmap data for reading and writing
+	FColor* MainMipData = static_cast<FColor*>(MainTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+	FColor* OverlayMipData = static_cast<FColor*>(OverlayTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_ONLY));
+
+	// Check if the overlay overlaps the main texture based on the center position
+	bool IsOverlayInBounds = (Center.X - (OverlayWidth / 2) >= 0) &&
+		(Center.X + (OverlayWidth / 2) <= MainWidth) &&
+		(Center.Y - (OverlayHeight / 2) >= 0) &&
+		(Center.Y + (OverlayHeight / 2) <= MainHeight);
+
+	if (!IsOverlayInBounds)
+	{
+		// Restore the original texture using the backup data
+		if (BufferColorData.Num() == MainWidth * MainHeight)
+		{
+			FMemory::Memcpy(MainMipData, BufferColorData.GetData(), MainWidth * MainHeight * sizeof(FColor));
+			MainTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+			MainTexture->UpdateResource();
+			OverlayTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+			return;
+		}
+	}
+
+	// Calculate scaling factor if the overlay texture is larger than the main texture
+	float ScaleX = 1.0f;
+	float ScaleY = 1.0f;
+
+	if (OverlayWidth > MainWidth)
+	{
+		ScaleX = static_cast<float>(MainWidth) / static_cast<float>(OverlayWidth);
+	}
+
+	if (OverlayHeight > MainHeight)
+	{
+		ScaleY = static_cast<float>(MainHeight) / static_cast<float>(OverlayHeight);
+	}
+
+	const float Scale = FMath::Min(ScaleX, ScaleY); // Maintain aspect ratio by using the smallest scale factor
+
+	// Iterate through each pixel of the main texture
+	for (int32 MainY = 0; MainY < MainHeight; ++MainY)
+	{
+		for (int32 MainX = 0; MainX < MainWidth; ++MainX)
+		{
+			// Calculate the position of the pixel in relation to the overlay position (taking scaling into account)
+			FVector2D OverlayPosition = (FVector2D(MainX, MainY) - Center) / Scale;
+
+			// Check if the overlay position is within the bounds of the overlay texture
+			int32 OverlayX = FMath::RoundToInt(OverlayPosition.X);
+			int32 OverlayY = FMath::RoundToInt(OverlayPosition.Y);
+
+			if (OverlayX >= 0 && OverlayX < OverlayWidth && OverlayY >= 0 && OverlayY < OverlayHeight)
+			{
+				// Calculate the index for the overlay texture pixel
+				int32 OverlayPixelIndex = (OverlayY * OverlayWidth) + OverlayX;
+
+				// Blend the overlay pixel with the main texture pixel
+				FColor* MainPixelColor = &MainMipData[(MainY * MainWidth) + MainX];
+				const FColor* OverlayPixelColor = &OverlayMipData[OverlayPixelIndex];
+
+				// Simple blend: just replace the main texture pixel with the overlay pixel
+				*MainPixelColor = *OverlayPixelColor;
+			}
+		}
+	}
+
+	// Unlock the texture data after making changes
+	MainTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+	OverlayTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+
+	// Update the main texture resource to apply the changes
+	MainTexture->UpdateResource();
+}
 
 
 void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance)
