@@ -320,25 +320,6 @@ void UTextureHelperEditorLibrary::CombineTexture(UTexture2D* MainTexture, UTextu
 	FColor* MainMipData = static_cast<FColor*>(MainTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
 	FColor* OverlayMipData = static_cast<FColor*>(OverlayTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_ONLY));
 
-	// Check if the overlay overlaps the main texture based on the center position
-	bool IsOverlayInBounds = (Center.X - (OverlayWidth / 2) >= 0) &&
-		(Center.X + (OverlayWidth / 2) <= MainWidth) &&
-		(Center.Y - (OverlayHeight / 2) >= 0) &&
-		(Center.Y + (OverlayHeight / 2) <= MainHeight);
-
-	if (!IsOverlayInBounds)
-	{
-		// Restore the original texture using the backup data
-		if (BufferColorData.Num() == MainWidth * MainHeight)
-		{
-			FMemory::Memcpy(MainMipData, BufferColorData.GetData(), MainWidth * MainHeight * sizeof(FColor));
-			MainTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
-			MainTexture->UpdateResource();
-			OverlayTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
-			return;
-		}
-	}
-
 	// Calculate scaling factor if the overlay texture is larger than the main texture
 	float ScaleX = 1.0f;
 	float ScaleY = 1.0f;
@@ -379,6 +360,17 @@ void UTextureHelperEditorLibrary::CombineTexture(UTexture2D* MainTexture, UTextu
 				// Simple blend: just replace the main texture pixel with the overlay pixel
 				*MainPixelColor = *OverlayPixelColor;
 			}
+			else
+			{
+				int32 PixelIndex = (MainY * MainWidth) + MainX;
+
+				// Blend the overlay pixel with the main texture pixel
+				FColor* MainPixelColor = &MainMipData[(MainY * MainWidth) + MainX];
+				const FColor OverlayPixelColor = BufferColorData[PixelIndex];
+
+				// Simple blend: just replace the main texture pixel with the overlay pixel
+				*MainPixelColor = OverlayPixelColor;
+			}
 		}
 	}
 
@@ -389,6 +381,7 @@ void UTextureHelperEditorLibrary::CombineTexture(UTexture2D* MainTexture, UTextu
 	// Update the main texture resource to apply the changes
 	MainTexture->UpdateResource();
 }
+
 
 
 void UTextureHelperEditorLibrary::ChromaKeyTexture(UTexture2D* InTexture, FColor ChromaColor, float InTolerance)
@@ -553,6 +546,8 @@ void UTextureHelperEditorLibrary::SaveTexture(UTexture2D* TextureAsset, UTexture
 	}
 
 	BufferColorData.Empty();
+
+	BackupTexture(WorkingTexture);
 }
 
 static bool OpenSaveAsDialog(UClass* SavedClass, const FString& InDefaultPath, const FString& InNewNameSuggestion, FString& OutPackageName)
@@ -658,6 +653,10 @@ void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 			UE_LOG(LogTemp, Error, TEXT("Failed to save the texture."));
 		}
 	}
+
+	BufferColorData.Empty();
+
+	BackupTexture(WorkingTexture);
 }
 
 void UTextureHelperEditorLibrary::Clear()
