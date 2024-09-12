@@ -94,7 +94,7 @@ public:
 	static void SaveTexture(UTexture2D* TextureAsset, UTexture2D* WorkingTexture);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
-	static void SaveAsTexture(UTexture2D* WorkingTexture);
+	static UTexture2D* SaveAsTexture(UTexture2D* WorkingTexture);
 
 	UFUNCTION(BlueprintCallable, Category = "Asset Helper|Texture Helper")
 	static void Clear();

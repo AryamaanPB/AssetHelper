@@ -585,7 +585,7 @@ static bool OpenSaveAsDialog(UClass* SavedClass, const FString& InDefaultPath, c
 	return false;
 }
 
-void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
+UTexture2D* UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 {
 	FString PackageName = TEXT("/Game/Image");
 	UPackage* Package = CreatePackage(*PackageName);
@@ -657,6 +657,8 @@ void UTextureHelperEditorLibrary::SaveAsTexture(UTexture2D* WorkingTexture)
 	BufferColorData.Empty();
 
 	BackupTexture(WorkingTexture);
+
+	return Cast<UTexture2D>(SavedObjects[0]);
 }
 
 void UTextureHelperEditorLibrary::Clear()
